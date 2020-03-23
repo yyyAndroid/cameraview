@@ -69,19 +69,17 @@ AflCameraManager.Companion.getMInstant().setContext(this).createCamera(
                 AflFacing.FACING_DOUBLE,
                 new FrontCameraID(), new BackCameraID());
 
-        AflCameraImpl c = AflCameraManager.Companion.getMInstant().getAflCamera(
+AflCameraImpl c = AflCameraManager.Companion.getMInstant().getAflCamera(
                 AflFacing.FACING_FONT);
 
-        mCameraView = c.getMCameraView();
-        mCameraViewTwo = AflCameraManager.Companion.getMInstant().getAflCamera(
-                AflFacing.FACING_BACK).getMCameraView();
+mCameraView = c.getMCameraView();
+mCameraViewTwo = AflCameraManager.Companion.getMInstant().getAflCamera(
+AflFacing.FACING_BACK).getMCameraView();
 
 
+AflCameraManager.Companion.getMInstant().start();
 
-
-                AflCameraManager.Companion.getMInstant().start();
-
-                AflCameraManager.Companion.getMInstant().stop();
+AflCameraManager.Companion.getMInstant().stop();
 
 ```
 You can see a complete usage in the demo app.

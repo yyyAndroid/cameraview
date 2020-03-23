@@ -28,6 +28,8 @@ abstract class PreviewImpl {
 
     interface Callback {
         void onSurfaceChanged();
+
+        void onSurfaceDestroyed();
     }
 
     private Callback mCallback;

@@ -50,6 +50,10 @@ abstract class CameraViewImpl {
 
     abstract Set<AspectRatio> getSupportedAspectRatios();
 
+    void setCameraId(int cameraId) {
+
+    }
+
     /**
      * @return {@code true} if the aspect ratio was changed.
      */
@@ -69,6 +73,7 @@ abstract class CameraViewImpl {
 
     abstract void setDisplayOrientation(int displayOrientation);
 
+
     interface Callback {
 
         void onCameraOpened();
@@ -77,6 +82,7 @@ abstract class CameraViewImpl {
 
         void onPictureTaken(byte[] data);
 
+        void onFramePreview(byte[] data, int width, int height);
     }
 
 }

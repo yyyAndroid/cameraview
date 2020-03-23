@@ -40,6 +40,8 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import com.google.android.cameraview.AspectRatio;
@@ -50,6 +52,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Set;
+
+import base.AflCameraManager;
+import base.AflFacing;
+import impl.AflCameraImpl;
 
 
 /**
@@ -87,6 +93,9 @@ public class MainActivity extends AppCompatActivity implements
     private int mCurrentFlash;
 
     private CameraView mCameraView;
+    private CameraView mCameraViewTwo;
+
+    private LinearLayout mCameraParent;
 
     private Handler mBackgroundHandler;
 
@@ -98,6 +107,10 @@ public class MainActivity extends AppCompatActivity implements
                     if (mCameraView != null) {
                         mCameraView.takePicture();
                     }
+
+                    if (mCameraViewTwo != null) {
+                        mCameraViewTwo.takePicture();
+                    }
                     break;
             }
         }
@@ -107,10 +120,54 @@ public class MainActivity extends AppCompatActivity implements
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        mCameraView = findViewById(R.id.camera);
+        mCameraParent = findViewById(R.id.camera_parent);
+//
+//        AflCameraManager.Companion.getMInstant().setContext(this)
+//                .createCamera(AflFacing.FACING_DOUBLE, new FrontCameraID(), new BackCameraID());
+//
+//        AflCameraImpl aflCamera = AflCameraManager.Companion.getMInstant().getAflCamera(
+//                AflFacing.FACING_BACK);
+//
+//        AflCameraImpl aflCamera2 = AflCameraManager.Companion.getMInstant().getAflCamera(
+//                AflFacing.FACING_FONT);
+//
+//        if (aflCamera != null) {
+//            aflCamera.setParentView(mCameraParent);
+//        }
+//
+//        if (aflCamera2 != null) {
+//            aflCamera2.setParentView(mCameraParent);
+//        }
+
+//      mCameraView = aflCamera.getMCameraView();
+        AflCameraManager.Companion.getMInstant().setContext(this).createCamera(
+                AflFacing.FACING_DOUBLE,
+                new FrontCameraID(), new BackCameraID());
+
+        AflCameraImpl c = AflCameraManager.Companion.getMInstant().getAflCamera(
+                AflFacing.FACING_FONT);
+
+        mCameraView = c.getMCameraView();
+        mCameraViewTwo = AflCameraManager.Companion.getMInstant().getAflCamera(
+                AflFacing.FACING_BACK).getMCameraView();
+
+        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1);
+        LinearLayout.LayoutParams layoutParams2 = new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1);
+        mCameraParent.addView(mCameraView, layoutParams);
+        mCameraParent.addView(mCameraViewTwo, layoutParams2);
+
+//        mCameraView.setCameraId(1);
         if (mCameraView != null) {
             mCameraView.addCallback(mCallback);
         }
+
+//        mCameraViewTwo = aflCamera2.getMCameraView();
+        if (mCameraViewTwo != null) {
+            mCameraViewTwo.addCallback(mCallback);
+        }
+
         FloatingActionButton fab = findViewById(R.id.take_picture);
         if (fab != null) {
             fab.setOnClickListener(mOnClickListener);
@@ -128,7 +185,13 @@ public class MainActivity extends AppCompatActivity implements
         super.onResume();
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
                 == PackageManager.PERMISSION_GRANTED) {
-            mCameraView.start();
+
+            AflCameraManager.Companion.getMInstant().start();
+//            mCameraView.start();
+            if (mCameraViewTwo != null) {
+                mCameraViewTwo.start();
+            }
+
         } else if (ActivityCompat.shouldShowRequestPermissionRationale(this,
                 Manifest.permission.CAMERA)) {
             ConfirmationDialogFragment
@@ -145,7 +208,11 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     protected void onPause() {
-        mCameraView.stop();
+        AflCameraManager.Companion.getMInstant().stop();
+//        mCameraView.stop();
+//        if (mCameraViewTwo != null) {
+//            mCameraViewTwo.stop();
+//        }
         super.onPause();
     }
 

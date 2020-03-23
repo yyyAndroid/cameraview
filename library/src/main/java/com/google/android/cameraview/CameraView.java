@@ -125,6 +125,10 @@ public class CameraView extends FrameLayout {
         };
     }
 
+    public void setCameraId(int cameraId) {
+        mImpl.setCameraId(cameraId);
+    }
+
     @NonNull
     private PreviewImpl createPreviewImpl(Context context) {
         PreviewImpl preview;
@@ -447,6 +451,13 @@ public class CameraView extends FrameLayout {
             }
         }
 
+        @Override
+        public void onFramePreview(byte[] data, int width, int height) {
+            for (Callback callback : mCallbacks) {
+                callback.onFramePreview(data, width, height);
+            }
+        }
+
         public void reserveRequestLayoutOnOpen() {
             mRequestLayoutOnOpen = true;
         }
@@ -486,8 +497,8 @@ public class CameraView extends FrameLayout {
             out.writeInt(flash);
         }
 
-        public static final Parcelable.Creator<SavedState> CREATOR
-                = new Parcelable.ClassLoaderCreator<SavedState>() {
+        public static final Creator<SavedState> CREATOR
+                = new ClassLoaderCreator<SavedState>() {
 
             @Override
             public SavedState createFromParcel(Parcel in) {
@@ -537,6 +548,9 @@ public class CameraView extends FrameLayout {
          * @param data       JPEG data.
          */
         public void onPictureTaken(CameraView cameraView, byte[] data) {
+        }
+
+        public void onFramePreview(byte[] data, int width, int height) {
         }
     }
 

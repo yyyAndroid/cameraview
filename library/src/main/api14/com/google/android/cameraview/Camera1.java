@@ -20,6 +20,7 @@ import android.annotation.SuppressLint;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.support.v4.util.SparseArrayCompat;
+import android.util.Log;
 import android.view.SurfaceHolder;
 
 import java.io.IOException;
@@ -30,7 +31,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 
 @SuppressWarnings("deprecation")
-class Camera1 extends CameraViewImpl {
+class Camera1 extends CameraViewImpl implements Camera.PreviewCallback {
 
     private static final int INVALID_CAMERA_ID = -1;
 
@@ -80,6 +81,22 @@ class Camera1 extends CameraViewImpl {
                     adjustCameraParameters();
                 }
             }
+
+            @Override
+            public void onSurfaceDestroyed() {
+                if (mCamera != null) {
+                    try {
+                        mCamera.setPreviewCallback(null);
+
+                        mCamera.setPreviewDisplay(null);
+                    } catch (Exception e) {
+                        Log.e("CAMERA_1::", "onSurfaceDestroyed preview cleanup failed", e);
+                    }
+
+                }
+            }
+
+
         });
     }
 
@@ -91,19 +108,25 @@ class Camera1 extends CameraViewImpl {
             setUpPreview();
         }
         mShowingPreview = true;
-        mCamera.startPreview();
+        startCameraPreview();
         return true;
+    }
+
+    private void startCameraPreview() {
+
+        mCamera.setPreviewCallback(this);
+        mCamera.startPreview();
     }
 
     @Override
     void stop() {
         if (mCamera != null) {
             mCamera.stopPreview();
+            mCamera.setPreviewCallback(null);
         }
         mShowingPreview = false;
         releaseCamera();
     }
-
     // Suppresses Camera#setPreviewTexture
     @SuppressLint("NewApi")
     void setUpPreview() {
@@ -255,10 +278,21 @@ class Camera1 extends CameraViewImpl {
         }
     }
 
+    @Override
+    public void onPreviewFrame(byte[] data, Camera camera) {
+        Camera.Size previewSize = mCameraParameters.getPreviewSize();
+        mCallback.onFramePreview(data, previewSize.width, previewSize.height);
+    }
+
     /**
      * This rewrites {@link #mCameraId} and {@link #mCameraInfo}.
      */
     private void chooseCamera() {
+
+        if (mCameraId != -1) {
+            return;
+        }
+
         for (int i = 0, count = Camera.getNumberOfCameras(); i < count; i++) {
             Camera.getCameraInfo(i, mCameraInfo);
             if (mCameraInfo.facing == mFacing) {
@@ -367,7 +401,8 @@ class Camera1 extends CameraViewImpl {
 
     /**
      * Calculate display orientation
-     * https://developer.android.com/reference/android/hardware/Camera.html#setDisplayOrientation(int)
+     * https://developer.android.com/reference/android/hardware/Camera.html#setDisplayOrientation
+     * (int)
      *
      * This calculation is used for orienting the preview
      *

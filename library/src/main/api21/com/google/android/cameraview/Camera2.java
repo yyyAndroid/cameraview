@@ -162,7 +162,11 @@ class Camera2 extends CameraViewImpl {
                     ByteBuffer buffer = planes[0].getBuffer();
                     byte[] data = new byte[buffer.remaining()];
                     buffer.get(data);
-                    mCallback.onPictureTaken(data);
+                    if (image.getFormat() == ImageFormat.JPEG) {
+                        mCallback.onPictureTaken(data);
+                    } else {
+                        mCallback.onFramePreview(data, image.getWidth(), image.getHeight());
+                    }
                 }
             }
         }
@@ -171,6 +175,8 @@ class Camera2 extends CameraViewImpl {
 
 
     private String mCameraId;
+
+    private String mSuperCameraId = "-1";
 
     private CameraCharacteristics mCameraCharacteristics;
 
@@ -196,6 +202,10 @@ class Camera2 extends CameraViewImpl {
 
     private int mDisplayOrientation;
 
+    public void setCameraId(int cameraId) {
+        mSuperCameraId = cameraId + "";
+    }
+
     Camera2(Callback callback, PreviewImpl preview, Context context) {
         super(callback, preview);
         mCameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
@@ -204,8 +214,14 @@ class Camera2 extends CameraViewImpl {
             public void onSurfaceChanged() {
                 startCaptureSession();
             }
+
+            @Override
+            public void onSurfaceDestroyed() {
+                stop();
+            }
         });
     }
+
 
     @Override
     boolean start() {
@@ -459,6 +475,9 @@ class Camera2 extends CameraViewImpl {
      */
     private void startOpeningCamera() {
         try {
+            if (!mSuperCameraId.equals("-1")) {
+                mCameraId = mSuperCameraId;
+            }
             mCameraManager.openCamera(mCameraId, mCameraDeviceCallback, null);
         } catch (CameraAccessException e) {
             throw new RuntimeException("Failed to open camera: " + mCameraId, e);

@@ -350,7 +350,7 @@ public class CameraView extends FrameLayout {
         }
     }
 
-    /**
+    /**x
      * Gets the current aspect ratio of camera.
      *
      * @return The current {@link AspectRatio}. Can be {@code null} if no camera is opened yet.

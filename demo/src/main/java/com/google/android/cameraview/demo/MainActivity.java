@@ -155,6 +155,8 @@ public class MainActivity extends AppCompatActivity implements
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1);
         LinearLayout.LayoutParams layoutParams2 = new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1);
+
+
         mCameraParent.addView(mCameraView, layoutParams);
         mCameraParent.addView(mCameraViewTwo, layoutParams2);
 
@@ -188,9 +190,9 @@ public class MainActivity extends AppCompatActivity implements
 
             AflCameraManager.Companion.getMInstant().start();
 //            mCameraView.start();
-            if (mCameraViewTwo != null) {
-                mCameraViewTwo.start();
-            }
+//            if (mCameraViewTwo != null) {
+//                mCameraViewTwo.start();
+//            }
 
         } else if (ActivityCompat.shouldShowRequestPermissionRationale(this,
                 Manifest.permission.CAMERA)) {
@@ -344,6 +346,10 @@ public class MainActivity extends AppCompatActivity implements
             });
         }
 
+        @Override
+        public void onFramePreview(byte[] data, int width, int height) {
+            Log.e(TAG, "onFramePreview  width : " + width + " height :" + height);
+        }
     };
 
     public static class ConfirmationDialogFragment extends DialogFragment {

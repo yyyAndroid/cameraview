@@ -82,7 +82,11 @@ class Camera2 extends CameraViewImpl {
 
         @Override
         public void onDisconnected(@NonNull CameraDevice camera) {
-            mCamera = null;
+            Camera2.this.mCamera = camera;
+            if (Camera2.this.mCamera != null) {
+                Camera2.this.mCamera.close();
+                Camera2.this.mCamera = null;
+            }
         }
 
         @Override
@@ -188,6 +192,8 @@ class Camera2 extends CameraViewImpl {
 
     private ImageReader mImageReader;
 
+    private ImageReader mFrameReader;
+
     private final SizeMap mPreviewSizes = new SizeMap();
 
     private final SizeMap mPictureSizes = new SizeMap();
@@ -230,6 +236,7 @@ class Camera2 extends CameraViewImpl {
         }
         collectCameraInfo();
         prepareImageReader();
+        prepareFrameImageReader();
         startOpeningCamera();
         return true;
     }
@@ -243,6 +250,10 @@ class Camera2 extends CameraViewImpl {
         if (mCamera != null) {
             mCamera.close();
             mCamera = null;
+        }
+        if (mFrameReader != null) {
+            mFrameReader.close();
+            mFrameReader = null;
         }
         if (mImageReader != null) {
             mImageReader.close();
@@ -286,6 +297,7 @@ class Camera2 extends CameraViewImpl {
         }
         mAspectRatio = ratio;
         prepareImageReader();
+        prepareFrameImageReader();
         if (mCaptureSession != null) {
             mCaptureSession.close();
             mCaptureSession = null;
@@ -469,6 +481,17 @@ class Camera2 extends CameraViewImpl {
         mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, null);
     }
 
+    private void prepareFrameImageReader() {
+        if (mFrameReader != null) {
+            mFrameReader.close();
+        }
+        Size largest = mPreviewSizes.sizes(mAspectRatio).last();
+        mFrameReader = ImageReader.newInstance(largest.getWidth(), largest.getHeight(),
+                ImageFormat.YUV_420_888, 1);
+        mFrameReader.setOnImageAvailableListener(mOnImageAvailableListener, null);
+
+    }
+
     /**
      * <p>Starts opening a camera device.</p>
      * <p>The result will be processed in {@link #mCameraDeviceCallback}.</p>
@@ -490,7 +513,8 @@ class Camera2 extends CameraViewImpl {
      * <p>The result will be continuously processed in {@link #mSessionCallback}.</p>
      */
     void startCaptureSession() {
-        if (!isCameraOpened() || !mPreview.isReady() || mImageReader == null) {
+        if (!isCameraOpened() || !mPreview.isReady() || mImageReader == null
+                || mFrameReader == null) {
             return;
         }
         Size previewSize = chooseOptimalSize();
@@ -499,10 +523,13 @@ class Camera2 extends CameraViewImpl {
         try {
             mPreviewRequestBuilder = mCamera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             mPreviewRequestBuilder.addTarget(surface);
-            mCamera.createCaptureSession(Arrays.asList(surface, mImageReader.getSurface()),
+            mPreviewRequestBuilder.addTarget(mFrameReader.getSurface());
+
+            mCamera.createCaptureSession(
+                    Arrays.asList(surface, mImageReader.getSurface(), mFrameReader.getSurface()),
                     mSessionCallback, null);
         } catch (CameraAccessException e) {
-            throw new RuntimeException("Failed to start camera session");
+            throw new RuntimeException("Failed to start camera session" + e.getMessage());
         }
     }
 

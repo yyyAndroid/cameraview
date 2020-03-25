@@ -4,6 +4,8 @@ import BackCamera
 import FrontCamera
 import android.content.Context
 import android.hardware.Camera
+import android.nfc.Tag
+import android.util.Log
 import com.google.android.cameraview.CameraView
 import com.google.android.cameraview.demo.DefaultBackCameraID
 import com.google.android.cameraview.demo.DefaultFrontCameraID
@@ -27,6 +29,8 @@ import kotlin.collections.HashMap
  */
 
 open class AflCameraManager private constructor() {
+
+    protected val TAG = "AflCameraManager"
 
     private lateinit var aflCameras: HashMap<AflFacing, AflCameraImpl>
 
@@ -109,7 +113,12 @@ open class AflCameraManager private constructor() {
         aflCameras.filter {
             it.value.aflCameraId != -1
         }.forEach {
-            it.value.mCameraView.start()
+            try {
+                it.value.mCameraView.start()
+            }catch (e :Exception){
+                Log.e(TAG, " 相机启动异常" + e.message)
+            }
+
         }
     }
 

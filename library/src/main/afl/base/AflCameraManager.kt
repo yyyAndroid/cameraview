@@ -4,6 +4,9 @@ import BackCamera
 import FrontCamera
 import android.content.Context
 import android.hardware.Camera
+import com.google.android.cameraview.CameraView
+import com.google.android.cameraview.demo.DefaultBackCameraID
+import com.google.android.cameraview.demo.DefaultFrontCameraID
 import impl.AflCameraImpl
 import kotlin.collections.HashMap
 
@@ -41,6 +44,10 @@ open class AflCameraManager private constructor() {
         return this
     }
 
+    fun createCamera(facing: AflFacing) {
+        createCamera(facing, DefaultFrontCameraID(), DefaultBackCameraID())
+    }
+
     fun createCamera(
             facing: AflFacing,
             frontCameraFacingImpl: CameraFacingImpl,
@@ -56,7 +63,7 @@ open class AflCameraManager private constructor() {
                     AflFacing.FACING_BACK,
                     BackCamera(context, backFameraFacingImpl)
             )
-            2 -> when (facing) {
+            2 or 3 -> when (facing) {
                 AflFacing.FACING_FONT -> aflCameras.put(
                         facing,
                         FrontCamera(context, frontCameraFacingImpl)
@@ -76,6 +83,26 @@ open class AflCameraManager private constructor() {
                 }
             }
         }
+    }
+
+    /**
+     * 获取前置摄像头照片
+     */
+    fun takeFrontPicture(takePictureCallback: CameraView.TakePictureCallback) {
+        if (getAflCamera(AflFacing.FACING_FONT) == null || getAflCamera(AflFacing.FACING_FONT)?.mCameraView == null) {
+            throw RuntimeException("获取FRONT相机对象为空")
+        }
+        getAflCamera(AflFacing.FACING_FONT)?.mCameraView?.setTakePicture(takePictureCallback)?.takePicture()
+    }
+
+    /**
+     * 获取舱内照片
+     */
+    fun takeBackPicture(takePictureCallback: CameraView.TakePictureCallback) {
+        if (getAflCamera(AflFacing.FACING_BACK) == null || getAflCamera(AflFacing.FACING_BACK)?.mCameraView == null) {
+            throw RuntimeException("获取BACK相机对象为空")
+        }
+        getAflCamera(AflFacing.FACING_BACK)?.mCameraView?.setTakePicture(takePictureCallback)?.takePicture()
     }
 
     fun start() {

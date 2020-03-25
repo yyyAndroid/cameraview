@@ -19,6 +19,7 @@ package com.google.android.cameraview;
 import android.app.Activity;
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.hardware.Camera;
 import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -27,6 +28,8 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.view.ViewCompat;
 import android.util.AttributeSet;
+import android.view.Surface;
+import android.view.WindowManager;
 import android.widget.FrameLayout;
 
 import java.lang.annotation.Retention;
@@ -95,7 +98,7 @@ public class CameraView extends FrameLayout {
         // Internal setup
         final PreviewImpl preview = createPreviewImpl(context);
         mCallbacks = new CallbackBridge();
-        if (Build.VERSION.SDK_INT < 21) {
+        if (Build.VERSION.SDK_INT < 23) {
             mImpl = new Camera1(mCallbacks, preview);
         } else if (Build.VERSION.SDK_INT < 23) {
             mImpl = new Camera2(mCallbacks, preview, context);
@@ -120,13 +123,55 @@ public class CameraView extends FrameLayout {
         mDisplayOrientationDetector = new DisplayOrientationDetector(context) {
             @Override
             public void onDisplayOrientationChanged(int displayOrientation) {
-                mImpl.setDisplayOrientation(displayOrientation);
+//                mImpl.setDisplayOrientation(displayOrientation);
             }
         };
     }
 
+
+    private int displayOrientation(Context context, int mCameraId) {
+        WindowManager windowManager = (WindowManager) context.getSystemService(
+                Context.WINDOW_SERVICE);
+        int rotation = windowManager.getDefaultDisplay().getRotation();
+        int degrees = 0;
+
+        if (mCameraId == 1) {
+            rotation = Surface.ROTATION_180;
+        }
+        switch (rotation) {
+            case Surface.ROTATION_0:
+                degrees = 0;
+                break;
+            case Surface.ROTATION_90:
+                degrees = 90;
+                break;
+            case Surface.ROTATION_180:
+                degrees = 180;
+                break;
+            case Surface.ROTATION_270:
+                degrees = 270;
+                break;
+            default:
+                degrees = 0;
+                break;
+        }
+        int result = (0 - degrees + 360) % 360;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
+            Camera.CameraInfo info = new Camera.CameraInfo();
+            Camera.getCameraInfo(mCameraId, info);
+            if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+                result = (info.orientation + degrees) % 360;
+                result = (360 - result) % 360;
+            } else {
+                result = (info.orientation - degrees + 360) % 360;
+            }
+        }
+        return result;
+    }
+
     public void setCameraId(int cameraId) {
         mImpl.setCameraId(cameraId);
+//        mImpl.setDisplayOrientation(displayOrientation(getContext(), cameraId));
     }
 
     @NonNull
@@ -260,6 +305,7 @@ public class CameraView extends FrameLayout {
      * {@link Activity#onPause()}.
      */
     public void stop() {
+        mCallbacks.mCallbacks.clear();
         mImpl.stop();
     }
 
@@ -278,6 +324,15 @@ public class CameraView extends FrameLayout {
      */
     public void addCallback(@NonNull Callback callback) {
         mCallbacks.add(callback);
+    }
+
+    public CameraView setTakePicture(TakePictureCallback takePicture) {
+        mCallbacks.setTakePictureCallback(takePicture);
+        return this;
+    }
+
+    public void removeTakePicture() {
+        mCallbacks.setTakePictureCallback(null);
     }
 
     /**
@@ -350,7 +405,8 @@ public class CameraView extends FrameLayout {
         }
     }
 
-    /**x
+    /**
+     * x
      * Gets the current aspect ratio of camera.
      *
      * @return The current {@link AspectRatio}. Can be {@code null} if no camera is opened yet.
@@ -413,9 +469,15 @@ public class CameraView extends FrameLayout {
 
         private final ArrayList<Callback> mCallbacks = new ArrayList<>();
 
+        private TakePictureCallback mTakePictureCallback;
+
         private boolean mRequestLayoutOnOpen;
 
         CallbackBridge() {
+        }
+
+        public void setTakePictureCallback(TakePictureCallback takePictureCallback) {
+            this.mTakePictureCallback = takePictureCallback;
         }
 
         public void add(Callback callback) {
@@ -446,6 +508,9 @@ public class CameraView extends FrameLayout {
 
         @Override
         public void onPictureTaken(byte[] data) {
+            if (mTakePictureCallback != null) {
+                mTakePictureCallback.onPictureTaken(CameraView.this, data);
+            }
             for (Callback callback : mCallbacks) {
                 callback.onPictureTaken(CameraView.this, data);
             }
@@ -551,6 +616,12 @@ public class CameraView extends FrameLayout {
         }
 
         public void onFramePreview(byte[] data, int width, int height) {
+        }
+    }
+
+
+    public abstract static class TakePictureCallback {
+        public void onPictureTaken(CameraView cameraView, byte[] data) {
         }
     }
 

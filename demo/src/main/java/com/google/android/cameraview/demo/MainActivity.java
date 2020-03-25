@@ -20,9 +20,9 @@ import android.Manifest;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.hardware.Camera;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.support.annotation.NonNull;
@@ -47,15 +47,10 @@ import android.widget.Toast;
 import com.google.android.cameraview.AspectRatio;
 import com.google.android.cameraview.CameraView;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
 import java.util.Set;
 
 import base.AflCameraManager;
 import base.AflFacing;
-import impl.AflCameraImpl;
 
 
 /**
@@ -93,6 +88,7 @@ public class MainActivity extends AppCompatActivity implements
     private int mCurrentFlash;
 
     private CameraView mCameraView;
+
     private CameraView mCameraViewTwo;
 
     private LinearLayout mCameraParent;
@@ -104,13 +100,29 @@ public class MainActivity extends AppCompatActivity implements
         public void onClick(View v) {
             switch (v.getId()) {
                 case R.id.take_picture:
-                    if (mCameraView != null) {
-                        mCameraView.takePicture();
+                    try {
+                        AflCameraManager.Companion.getMInstant().takeBackPicture(
+                                new CameraView.TakePictureCallback() {
+                                    @Override
+                                    public void onPictureTaken(CameraView cameraView, byte[] data) {
+                                        Toast.makeText(MainActivity.this, "获取Back照片成功",
+                                                Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+
+
+                        AflCameraManager.Companion.getMInstant().takeFrontPicture(
+                                new CameraView.TakePictureCallback() {
+                                    @Override
+                                    public void onPictureTaken(CameraView cameraView, byte[] data) {
+                                        Toast.makeText(MainActivity.this, "获取Frong照片成功",
+                                                Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                    } catch (Exception e) {
+                        Log.e(TAG, "拍照异常" + e.getMessage());
                     }
 
-                    if (mCameraViewTwo != null) {
-                        mCameraViewTwo.takePicture();
-                    }
                     break;
             }
         }
@@ -120,66 +132,58 @@ public class MainActivity extends AppCompatActivity implements
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        Log.e("yyy", "Camera.getNumberOfCameras()  " + Camera.getNumberOfCameras());
+
         mCameraParent = findViewById(R.id.camera_parent);
-//
-//        AflCameraManager.Companion.getMInstant().setContext(this)
-//                .createCamera(AflFacing.FACING_DOUBLE, new FrontCameraID(), new BackCameraID());
-//
-//        AflCameraImpl aflCamera = AflCameraManager.Companion.getMInstant().getAflCamera(
-//                AflFacing.FACING_BACK);
-//
-//        AflCameraImpl aflCamera2 = AflCameraManager.Companion.getMInstant().getAflCamera(
-//                AflFacing.FACING_FONT);
-//
-//        if (aflCamera != null) {
-//            aflCamera.setParentView(mCameraParent);
-//        }
-//
-//        if (aflCamera2 != null) {
-//            aflCamera2.setParentView(mCameraParent);
-//        }
 
-//      mCameraView = aflCamera.getMCameraView();
-        AflCameraManager.Companion.getMInstant().setContext(this).createCamera(
-                AflFacing.FACING_DOUBLE,
-                new FrontCameraID(), new BackCameraID());
+        createCamera();
 
-        AflCameraImpl c = AflCameraManager.Companion.getMInstant().getAflCamera(
-                AflFacing.FACING_FONT);
-
-        mCameraView = c.getMCameraView();
-        mCameraViewTwo = AflCameraManager.Companion.getMInstant().getAflCamera(
-                AflFacing.FACING_BACK).getMCameraView();
-
-        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(0,
-                ViewGroup.LayoutParams.WRAP_CONTENT, 1);
-        LinearLayout.LayoutParams layoutParams2 = new LinearLayout.LayoutParams(0,
-                ViewGroup.LayoutParams.WRAP_CONTENT, 1);
-
-
-        mCameraParent.addView(mCameraView, layoutParams);
-        mCameraParent.addView(mCameraViewTwo, layoutParams2);
-
-//        mCameraView.setCameraId(1);
         if (mCameraView != null) {
             mCameraView.addCallback(mCallback);
         }
 
-//        mCameraViewTwo = aflCamera2.getMCameraView();
         if (mCameraViewTwo != null) {
             mCameraViewTwo.addCallback(mCallback);
         }
-
         FloatingActionButton fab = findViewById(R.id.take_picture);
         if (fab != null) {
             fab.setOnClickListener(mOnClickListener);
         }
+
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
             actionBar.setDisplayShowTitleEnabled(false);
         }
+    }
+
+    private void createCamera() {
+
+        AflCameraManager.Companion.getMInstant().setContext(this)
+                .createCamera(AflFacing.FACING_DOUBLE, new DefaultFrontCameraID(),
+                        new DefaultBackCameraID());
+
+        if (AflCameraManager.Companion.getMInstant().getAflCamera(AflFacing.FACING_BACK) != null) {
+            mCameraView = AflCameraManager.Companion.getMInstant().getAflCamera(
+                    AflFacing.FACING_BACK).getMCameraView();
+        }
+
+        if (AflCameraManager.Companion.getMInstant().getAflCamera(AflFacing.FACING_FONT) != null) {
+            mCameraViewTwo = AflCameraManager.Companion.getMInstant().getAflCamera(
+                    AflFacing.FACING_FONT).getMCameraView();
+        }
+
+        if (mCameraView != null) {
+            mCameraParent.addView(mCameraView,
+                    new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        }
+
+        if (mCameraViewTwo != null) {
+            mCameraParent.addView(mCameraViewTwo,
+                    new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        }
+
     }
 
     @Override
@@ -189,10 +193,6 @@ public class MainActivity extends AppCompatActivity implements
                 == PackageManager.PERMISSION_GRANTED) {
 
             AflCameraManager.Companion.getMInstant().start();
-//            mCameraView.start();
-//            if (mCameraViewTwo != null) {
-//                mCameraViewTwo.start();
-//            }
 
         } else if (ActivityCompat.shouldShowRequestPermissionRationale(this,
                 Manifest.permission.CAMERA)) {
@@ -210,11 +210,9 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     protected void onPause() {
+
         AflCameraManager.Companion.getMInstant().stop();
-//        mCameraView.stop();
-//        if (mCameraViewTwo != null) {
-//            mCameraViewTwo.stop();
-//        }
+
         super.onPause();
     }
 
@@ -281,6 +279,12 @@ public class MainActivity extends AppCompatActivity implements
                     mCameraView.setFacing(facing == CameraView.FACING_FRONT ?
                             CameraView.FACING_BACK : CameraView.FACING_FRONT);
                 }
+
+                if (mCameraViewTwo != null) {
+                    int facing = mCameraViewTwo.getFacing();
+                    mCameraViewTwo.setFacing(facing == CameraView.FACING_FRONT ?
+                            CameraView.FACING_BACK : CameraView.FACING_FRONT);
+                }
                 return true;
         }
         return super.onOptionsItemSelected(item);
@@ -314,36 +318,6 @@ public class MainActivity extends AppCompatActivity implements
         @Override
         public void onCameraClosed(CameraView cameraView) {
             Log.d(TAG, "onCameraClosed");
-        }
-
-        @Override
-        public void onPictureTaken(CameraView cameraView, final byte[] data) {
-            Log.d(TAG, "onPictureTaken " + data.length);
-            Toast.makeText(cameraView.getContext(), R.string.picture_taken, Toast.LENGTH_SHORT)
-                    .show();
-            getBackgroundHandler().post(new Runnable() {
-                @Override
-                public void run() {
-                    File file = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES),
-                            "picture.jpg");
-                    OutputStream os = null;
-                    try {
-                        os = new FileOutputStream(file);
-                        os.write(data);
-                        os.close();
-                    } catch (IOException e) {
-                        Log.w(TAG, "Cannot write to " + file, e);
-                    } finally {
-                        if (os != null) {
-                            try {
-                                os.close();
-                            } catch (IOException e) {
-                                // Ignore
-                            }
-                        }
-                    }
-                }
-            });
         }
 
         @Override

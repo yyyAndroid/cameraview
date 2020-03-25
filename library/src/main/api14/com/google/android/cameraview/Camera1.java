@@ -17,11 +17,16 @@
 package com.google.android.cameraview;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
+import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
+import android.os.Build;
 import android.support.v4.util.SparseArrayCompat;
 import android.util.Log;
+import android.view.Surface;
 import android.view.SurfaceHolder;
+import android.view.WindowManager;
 
 import java.io.IOException;
 import java.util.List;
@@ -121,12 +126,13 @@ class Camera1 extends CameraViewImpl implements Camera.PreviewCallback {
     @Override
     void stop() {
         if (mCamera != null) {
-            mCamera.stopPreview();
             mCamera.setPreviewCallback(null);
+            mCamera.stopPreview();
         }
         mShowingPreview = false;
         releaseCamera();
     }
+
     // Suppresses Camera#setPreviewTexture
     @SuppressLint("NewApi")
     void setUpPreview() {
@@ -272,9 +278,9 @@ class Camera1 extends CameraViewImpl implements Camera.PreviewCallback {
         }
         mDisplayOrientation = displayOrientation;
         if (isCameraOpened()) {
-            mCameraParameters.setRotation(calcCameraRotation(displayOrientation));
+            mCameraParameters.setRotation(displayOrientation);
             mCamera.setParameters(mCameraParameters);
-            mCamera.setDisplayOrientation(calcDisplayOrientation(displayOrientation));
+            mCamera.setDisplayOrientation(displayOrientation);
         }
     }
 
@@ -282,6 +288,11 @@ class Camera1 extends CameraViewImpl implements Camera.PreviewCallback {
     public void onPreviewFrame(byte[] data, Camera camera) {
         Camera.Size previewSize = mCameraParameters.getPreviewSize();
         mCallback.onFramePreview(data, previewSize.width, previewSize.height);
+    }
+
+    @Override
+    void setCameraId(int cameraId) {
+        mCameraId = cameraId;
     }
 
     /**
@@ -324,10 +335,45 @@ class Camera1 extends CameraViewImpl implements Camera.PreviewCallback {
             mAspectRatio = Constants.DEFAULT_ASPECT_RATIO;
         }
         adjustCameraParameters();
-        mCamera.setDisplayOrientation(calcDisplayOrientation(mDisplayOrientation));
+        mCamera.setDisplayOrientation(displayOrientation(getView().getContext()));
         mCallback.onCameraOpened();
     }
 
+
+    private int displayOrientation(Context context) {
+        WindowManager windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+        int rotation = windowManager.getDefaultDisplay().getRotation();
+        int degrees = 0;
+        switch (rotation) {
+            case Surface.ROTATION_0:
+                degrees = 0;
+                break;
+            case Surface.ROTATION_90:
+                degrees = 90;
+                break;
+            case Surface.ROTATION_180:
+                degrees = 180;
+                break;
+            case Surface.ROTATION_270:
+                degrees = 270;
+                break;
+            default:
+                degrees = 0;
+                break;
+        }
+        int result = (0 - degrees + 360) % 360;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
+            Camera.CameraInfo info = new Camera.CameraInfo();
+            Camera.getCameraInfo(mCameraId, info);
+            if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+                result = (info.orientation + degrees) % 360;
+                result = (360 - result) % 360;
+            } else {
+                result = (info.orientation - degrees + 360) % 360;
+            }
+        }
+        return result;
+    }
     private AspectRatio chooseAspectRatio() {
         AspectRatio r = null;
         for (AspectRatio ratio : mPreviewSizes.ratios()) {
@@ -340,6 +386,19 @@ class Camera1 extends CameraViewImpl implements Camera.PreviewCallback {
     }
 
     void adjustCameraParameters() {
+
+//        Camera.Parameters parameters = mCamera.getParameters();
+//        parameters.setPreviewFormat(ImageFormat.NV21);
+//
+//        //预览大小设置
+//        previewSize = parameters.getPreviewSize();
+//        List<Camera.Size> supportedPreviewSizes = parameters.getSupportedPreviewSizes();
+//        if (supportedPreviewSizes != null && supportedPreviewSizes.size() > 0) {
+//            previewSize = getBestSupportedSize(supportedPreviewSizes, previewViewSize);
+//        }
+//        parameters.setPreviewSize(previewSize.width, previewSize.height);
+
+
         SortedSet<Size> sizes = mPreviewSizes.sizes(mAspectRatio);
         if (sizes == null) { // Not supported
             mAspectRatio = chooseAspectRatio();
@@ -353,6 +412,7 @@ class Camera1 extends CameraViewImpl implements Camera.PreviewCallback {
         if (mShowingPreview) {
             mCamera.stopPreview();
         }
+        mCameraParameters.setPreviewFormat(ImageFormat.NV21);
         mCameraParameters.setPreviewSize(size.getWidth(), size.getHeight());
         mCameraParameters.setPictureSize(pictureSize.getWidth(), pictureSize.getHeight());
         mCameraParameters.setRotation(calcCameraRotation(mDisplayOrientation));

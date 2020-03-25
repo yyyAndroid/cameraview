@@ -382,6 +382,7 @@ class Camera2 extends CameraViewImpl {
      */
     private boolean chooseCameraIdByFacing() {
         try {
+
             int internalFacing = INTERNAL_FACINGS.get(mFacing);
             final String[] ids = mCameraManager.getCameraIdList();
             if (ids.length == 0) { // No camera

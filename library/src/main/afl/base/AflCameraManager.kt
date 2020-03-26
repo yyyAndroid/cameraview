@@ -67,7 +67,7 @@ open class AflCameraManager private constructor() {
                     AflFacing.FACING_BACK,
                     BackCamera(context, backFameraFacingImpl)
             )
-            2 or 3 -> when (facing) {
+            2, 3 -> when (facing) {
                 AflFacing.FACING_FONT -> aflCameras.put(
                         facing,
                         FrontCamera(context, frontCameraFacingImpl)

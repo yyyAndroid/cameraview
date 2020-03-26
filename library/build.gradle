@@ -59,7 +59,7 @@ publish {
     userOrg = 'noexceptionyes'//bintray.com用户名
     groupId = 'com.ahs'//jcenter上的路径
     artifactId = 'aflCameraLib'//项目名称
-    publishVersion = '1.0.5'//版本号
+    publishVersion = '1.0.6'//版本号
     desc = 'for aifenlei camera lib'//描述，不重要
     website = 'https://github.com/yyyAndroid/cameraview'//网站，不重要
 }
